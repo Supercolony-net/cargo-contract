@@ -54,20 +54,20 @@
 
 use core::fmt::{Display, Formatter, Result as DisplayResult, Write};
 use semver::Version;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::{Map, Value};
 use url::Url;
 
 /// Smart contract metadata.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ContractMetadata {
-    source: Source,
-    contract: Contract,
+    pub source: Source,
+    pub contract: Contract,
     #[serde(skip_serializing_if = "Option::is_none")]
-    user: Option<User>,
+    pub user: Option<User>,
     /// Raw JSON of the contract abi metadata, generated during contract compilation.
     #[serde(flatten)]
-    abi: Map<String, Value>,
+    pub abi: Map<String, Value>,
 }
 
 impl ContractMetadata {
@@ -104,13 +104,13 @@ impl Serialize for CodeHash {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Source {
-    hash: CodeHash,
-    language: SourceLanguage,
-    compiler: SourceCompiler,
+    pub hash: CodeHash,
+    pub language: SourceLanguage,
+    pub compiler: SourceCompiler,
     #[serde(skip_serializing_if = "Option::is_none")]
-    wasm: Option<SourceWasm>,
+    pub wasm: Option<SourceWasm>,
 }
 
 impl Source {
@@ -133,7 +133,7 @@ impl Source {
 /// The bytes of the compiled Wasm smart contract.
 #[derive(Clone, Debug)]
 pub struct SourceWasm {
-    wasm: Vec<u8>,
+    pub wasm: Vec<u8>,
 }
 
 impl SourceWasm {
@@ -165,8 +165,8 @@ impl Display for SourceWasm {
 /// The language and version in which a smart contract is written.
 #[derive(Clone, Debug)]
 pub struct SourceLanguage {
-    language: Language,
-    version: Version,
+    pub language: Language,
+    pub version: Version,
 }
 
 impl SourceLanguage {
@@ -238,7 +238,7 @@ impl SourceCompiler {
 }
 
 /// Compilers used to compile a smart contract.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Compiler {
     RustC,
     Solang,
@@ -254,7 +254,7 @@ impl Display for Compiler {
 }
 
 /// Metadata about a smart contract.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Contract {
     name: String,
     version: Version,
@@ -278,7 +278,7 @@ impl Contract {
 }
 
 /// Additional user defined metadata, can be any valid json.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct User {
     #[serde(flatten)]
     json: Map<String, Value>,
