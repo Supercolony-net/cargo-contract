@@ -52,6 +52,7 @@ pub(crate) struct ExecuteArgs {
     optimization_passes: OptimizationPasses,
     keep_debug_symbols: bool,
     output_type: OutputType,
+    metadata_contract_path: Option<PathBuf>,
 }
 
 /// Executes build of the smart-contract which produces a wasm binary that is ready for deploying.
@@ -124,6 +125,10 @@ pub struct BuildCommand {
     /// Export the build output in JSON format.
     #[structopt(long, conflicts_with = "verbose")]
     output_json: bool,
+
+    /// Path to the Cargo.toml of the contract to use for the metadata
+    #[structopt(long, parse(from_os_str))]
+    metadata_contract_path: Option<PathBuf>,
 }
 
 impl BuildCommand {
@@ -178,6 +183,7 @@ impl BuildCommand {
             optimization_passes,
             keep_debug_symbols: self.keep_debug_symbols,
             output_type,
+            metadata_contract_path: self.metadata_contract_path.clone(),
         };
 
         execute(args)
@@ -213,6 +219,7 @@ impl CheckCommand {
             optimization_passes: OptimizationPasses::Zero,
             keep_debug_symbols: false,
             output_type: OutputType::default(),
+            metadata_contract_path: None,
         };
 
         execute(args)
@@ -645,6 +652,7 @@ pub(crate) fn execute(args: ExecuteArgs) -> Result<BuildResult> {
         optimization_passes,
         keep_debug_symbols,
         output_type,
+        metadata_contract_path,
     } = args;
 
     let crate_metadata = CrateMetadata::collect(&manifest_path)?;
@@ -709,15 +717,54 @@ pub(crate) fn execute(args: ExecuteArgs) -> Result<BuildResult> {
         BuildArtifacts::All => {
             let optimization_result = build()?;
 
-            let metadata_result = super::metadata::execute(
-                &crate_metadata,
-                optimization_result.dest_wasm.as_path(),
-                network,
-                verbosity,
-                build_artifact.steps(),
-                &unstable_flags,
-            )?;
-            (Some(optimization_result), Some(metadata_result))
+            match metadata_contract_path {
+                None => {
+                    let metadata_result = super::metadata::execute(
+                        &crate_metadata,
+                        optimization_result.dest_wasm.as_path(),
+                        network,
+                        verbosity,
+                        build_artifact.steps(),
+                        &unstable_flags,
+                    )?;
+                    (Some(optimization_result), Some(metadata_result))
+                }
+                Some(metadata_path) => {
+                    let target_dir = crate_metadata.target_directory.clone();
+                    let dest_wasm = crate_metadata.dest_wasm.clone();
+                    let contract_artifact_name = crate_metadata.contract_artifact_name.clone();
+                    let mut crate_metadata = CrateMetadata::collect(
+                        &ManifestPath::new(metadata_path).expect("")
+                    )?;
+                    crate_metadata.target_directory = target_dir;
+                    crate_metadata.dest_wasm = dest_wasm;
+                    crate_metadata.contract_artifact_name = contract_artifact_name;
+
+                    let mut res = None;
+                    Workspace::new(&crate_metadata.cargo_meta, &crate_metadata.root_package.id)?
+                        .with_root_package_manifest(|manifest| {
+                            manifest
+                                .with_removed_crate_type("rlib")?
+                                .with_profile_release_defaults(Profile::default_contract_release())?;
+                            Ok(())
+                        })?
+                        .using_temp(|manifest_path: &ManifestPath| {
+                            let metadata_result = super::metadata::execute(
+                                &crate_metadata,
+                                optimization_result.dest_wasm.as_path(),
+                                network,
+                                verbosity,
+                                build_artifact.steps(),
+                                &unstable_flags,
+                            )?;
+                            res =Some(
+                                (Some(optimization_result), Some(metadata_result))
+                            );
+                            Ok(())
+                        });
+                    res.expect("foo")
+                }
+            }
         }
     };
     let dest_wasm = opt_result.as_ref().map(|r| r.dest_wasm.clone());
@@ -879,6 +926,7 @@ mod tests_ci_only {
                 build_offline: false,
                 verbosity: VerbosityFlags::default(),
                 unstable_options: UnstableOptions::default(),
+                metadata_contract_path: None,
 
                 // we choose zero optimization passes as the "cli" parameter
                 optimization_passes: Some(OptimizationPasses::Zero),
@@ -920,6 +968,7 @@ mod tests_ci_only {
                 build_offline: false,
                 verbosity: VerbosityFlags::default(),
                 unstable_options: UnstableOptions::default(),
+                metadata_contract_path: None,
 
                 // we choose no optimization passes as the "cli" parameter
                 optimization_passes: None,
@@ -1091,6 +1140,7 @@ mod tests_ci_only {
                 optimization_passes: None,
                 keep_debug_symbols: false,
                 output_json: false,
+                metadata_contract_path: None,
             };
             let res = cmd.exec().expect("build failed");
 
