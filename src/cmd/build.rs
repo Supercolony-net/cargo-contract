@@ -810,22 +810,12 @@ pub(crate) fn execute(args: ExecuteArgs) -> Result<BuildResult> {
     }
 
     let build = || -> Result<OptimizationResult> {
-        if skip_linting {
-            maybe_println!(
-                verbosity,
-                " {} {}",
-                format!("[1/{}]", build_artifact.steps()).bold(),
-                "Skip ink! linting rules".bright_yellow().bold()
-            );
-        } else {
-            maybe_println!(
-                verbosity,
-                " {} {}",
-                format!("[1/{}]", build_artifact.steps()).bold(),
-                "Checking ink! linting rules".bright_green().bold()
-            );
-            exec_cargo_dylint(&crate_metadata, verbosity)?;
-        }
+        maybe_println!(
+            verbosity,
+            " {} {}",
+            format!("[1/{}]", build_artifact.steps()).bold(),
+            "Skip ink! linting rules".bright_yellow().bold()
+        );
 
         maybe_println!(
             verbosity,
@@ -864,22 +854,12 @@ pub(crate) fn execute(args: ExecuteArgs) -> Result<BuildResult> {
 
     let (opt_result, metadata_result) = match build_artifact {
         BuildArtifacts::CheckOnly => {
-            if skip_linting {
-                maybe_println!(
-                    verbosity,
-                    " {} {}",
-                    format!("[1/{}]", build_artifact.steps()).bold(),
-                    "Skip ink! linting rules".bright_yellow().bold()
-                );
-            } else {
-                maybe_println!(
-                    verbosity,
-                    " {} {}",
-                    format!("[1/{}]", build_artifact.steps()).bold(),
-                    "Checking ink! linting rules".bright_green().bold()
-                );
-                exec_cargo_dylint(&crate_metadata, verbosity)?;
-            }
+            maybe_println!(
+                verbosity,
+                " {} {}",
+                format!("[1/{}]", build_artifact.steps()).bold(),
+                "Skip ink! linting rules".bright_yellow().bold()
+            );
 
             maybe_println!(
                 verbosity,
