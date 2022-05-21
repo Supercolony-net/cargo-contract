@@ -206,7 +206,7 @@ impl BuildCommand {
             unstable_flags,
             optimization_passes,
             keep_debug_symbols: self.keep_debug_symbols,
-            skip_linting: self.skip_linting,
+            skip_linting: self.skip_linting || true,
             output_type,
         };
 
@@ -242,7 +242,7 @@ impl CheckCommand {
             unstable_flags,
             optimization_passes: OptimizationPasses::Zero,
             keep_debug_symbols: false,
-            skip_linting: false,
+            skip_linting: true,
             output_type: OutputType::default(),
         };
 
